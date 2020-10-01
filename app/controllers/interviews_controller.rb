@@ -35,6 +35,9 @@ class InterviewsController < ApplicationController
 
     respond_to do |format|
       if @interview.save
+        MailJob.perform_later(@interview, "schedule")
+        scheduledtime = @interview.start_time - 5.hours - 30.minutes - 30.minutes
+        MailJob.set(wait_until: scheduledtime).perform_later(@interview, "reminder")
         format.html { redirect_to @interview, notice: 'Interview was successfully created.' }
         format.json { render :show, status: :created, location: @interview }
       else
@@ -49,6 +52,9 @@ class InterviewsController < ApplicationController
   def update
     respond_to do |format|
       if @interview.update(interview_params)
+        MailJob.perform_later(@interview, "update")
+        scheduledtime = @interview.start_time - 5.hours - 30.minutes - 30.minutes
+        MailJob.perform_later(@interview, "reminder")
         format.html { redirect_to @interview, notice: 'Interview was successfully updated.' }
         format.json { render :show, status: :ok, location: @interview }
       else

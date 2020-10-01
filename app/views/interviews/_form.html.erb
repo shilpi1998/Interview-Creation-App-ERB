@@ -25,7 +25,7 @@
     <%= form.label :end_time %>
     <%= form.datetime_select :end_time %>
   </div>
-
+ <% @all_participants = Participant.all %>
   <%= fields_for(@interview_participant) do |ip| %>
     <div class="field">
       <%= ip.label "All Participants" %><br />
