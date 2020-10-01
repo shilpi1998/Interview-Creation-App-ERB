@@ -1,0 +1,87 @@
+class InterviewsController < ApplicationController
+  before_action :set_interview, only: [:show, :edit, :update, :destroy]
+
+  # GET /interviews
+  # GET /interviews.json
+  def index
+    @interviews = Interview.all
+  end
+
+  # GET /interviews/1
+  # GET /interviews/1.json
+  def show
+  end
+
+  # GET /interviews/new
+  def new
+    @interview = Interview.new
+    @all_participants = Participant.all
+    @interview_participant = @interview.interviewparticipants.build
+  end
+
+  # GET /interviews/1/edit
+  def edit
+  end
+
+  # POST /interviews
+  # POST /interviews.json
+  def create
+    @interview = Interview.new(interview_params)
+    params[:participants][:id].each do |participant|
+      if !participant.empty?
+        @interview.interviewparticipants.build(:participant_id => participant)
+      end
+    end
+
+    respond_to do |format|
+      if @interview.save
+        MailJob.perform_later(@interview, "schedule")
+        scheduledtime = @interview.start_time - 5.hours - 30.minutes - 30.minutes
+        MailJob.set(wait_until: scheduledtime).perform_later(@interview, "reminder")
+        format.html { redirect_to @interview, notice: 'Interview was successfully created.' }
+        format.json { render :show, status: :created, location: @interview }
+      else
+        format.html { render :new }
+        format.json { render json: @interview.errors, status: :unprocessable_entity }
+      end
+    end
+  end
+
+  # PATCH/PUT /interviews/1
+  # PATCH/PUT /interviews/1.json
+  def update
+    respond_to do |format|
+      if @interview.update(interview_params)
+        MailJob.perform_later(@interview, "update")
+        scheduledtime = @interview.start_time - 5.hours - 30.minutes - 30.minutes
+        MailJob.perform_later(@interview, "reminder")
+        format.html { redirect_to @interview, notice: 'Interview was successfully updated.' }
+        format.json { render :show, status: :ok, location: @interview }
+      else
+        format.html { render :edit }
+        format.json { render json: @interview.errors, status: :unprocessable_entity }
+      end
+    end
+  end
+
+  # DELETE /interviews/1
+  # DELETE /interviews/1.json
+  def destroy
+    @interview.destroy
+    respond_to do |format|
+      format.html { redirect_to interviews_url, notice: 'Interview was successfully destroyed.' }
+      format.json { head :no_content }
+    end
+  end
+
+  private
+    # Use callbacks to share common setup or constraints between actions.
+    def set_interview
+      @interview = Interview.find(params[:id])
+    end
+
+    # Only allow a list of trusted parameters through.
+    def interview_params
+      params.require(:interview).permit(:title, :start_time, :end_time)
+    end
+end
